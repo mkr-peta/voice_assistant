@@ -1,6 +1,5 @@
 Voice Assistant Application
 
-** Core Requirements Fulfillment: **
 1. Language Flexibility -- Python is chosen due to its extensive support for natural language processing and its powerful libraries, such as Flask for web applications and azure-cognitiveservices-speech for voice recognition.
 
 2. Voice Recognition -- Utilized Azure Cognitive Services' Speech-to-Text API for accurate voice recognition, focusing on capturing "Yes" or "No" responses.
@@ -27,9 +26,6 @@ To run the container on your local machine: 'docker run -p 5002:5002 -e AZURE_SP
 Once the container is running, open a web browser and go to http://localhost:5002 to interact with the voice assistant.
 
 
-
-
-** For bonus points, **
 
 1. Advanced handling of edge cases in speech recognition (e.g., background noise, different accents).
 Azure Cognitive Services' Speech-to-Text has been utilized for its state-of-the-art noise reduction and accent recognition capabilities, which are crucial for handling various speech edge cases. The service provides Noise Reduction, Accent Recognition, Configurability. These features ensure that the voice assistant can understand and process "Yes" or "No" answers accurately, even in less-than-ideal audio conditions.
