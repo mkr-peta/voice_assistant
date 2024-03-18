@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voice Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        let attempts = 1;
+        const maxAttempts = 3;
+
+        const questions = [
+            "Do you believe technology is improving our quality of life?",
+            "Can artificial intelligence ever fully understand human emotions?",
+            "Is space travel essential for the survival of humanity?",
+            "Should humanity invest in colonizing other planets?",
+            "Will virtual reality become the primary form of entertainment?",
+            "Can technology play a crucial role in solving climate change?",
+            "Is it possible for renewable energy to completely replace fossil fuels?",
+            "Are the benefits of genetic engineering worth the ethical concerns?",
+            "Will the Internet of Things significantly improve daily convenience?",
+            "Do you think self-driving cars will become the standard mode of transportation?"
+        ];
+        
+        function endInteraction() {
+            let responseParagraph = document.getElementById("response");
+            let lineBreak = document.createElement('br');
+            
+            responseParagraph.appendChild(lineBreak);
+            let span = document.createElement('span');
+            span.classList.add('interaction-ended');
+            span.textContent = " Interaction ended!!!";
+            responseParagraph.appendChild(span);
+        }
+
+        function startRecording() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    const mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
+    
+                    const audioChunks = [];
+                    mediaRecorder.addEventListener("dataavailable", event => {
+                        audioChunks.push(event.data);
+                    });
+    
+                    mediaRecorder.addEventListener("stop", () => {
+                        const audioBlob = new Blob(audioChunks, {type: 'audio/wav'});
+                        const formData = new FormData();
+                        formData.append("file", audioBlob);
+                        
+                        const audioUrl = URL.createObjectURL(audioBlob);
+    
+    
+                        fetch("/process_voice", {
+                            method: "POST",
+                            body: formData,
+                        })
+                        .then(response => {
+                            if(!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json(); 
+                        })
+                        .then(data => {
+                            if(data.error) {
+                                throw new Error(data.error);
+                            }
+                            document.getElementById("response").innerText = data.message;
+                            if (data.message.includes("Please say 'Yes' or 'No'.")) {
+                                if(data.message.includes("Speech not recognized")){
+                                    attempts--;
+                                }
+                                if (attempts < maxAttempts) {
+                                    attempts++;
+                                    startRecording();
+                                } else {
+                                    fetch("/log_interaction_end", {
+                                        method: "POST",
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({ message: "Invalid response!! Interaction ended" }),
+                                    });
+                                    endInteraction();
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Error:", error);
+                            document.getElementById("response").innerText = "Error processing audio.";
+                        });
+                    });
+    
+                    setTimeout(() => {
+                        mediaRecorder.stop();
+                    }, 2500);
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    document.getElementById("response").innerText = "Could not start recording.";
+                });
+        }
+    
+        function askQuestion() {
+            attempts = 1;
+
+            document.getElementById("response").innerText = "";
+
+            let question = questions[Math.floor(Math.random() * questions.length)];
+            let synth = window.speechSynthesis;
+            let utterThis = new SpeechSynthesisUtterance(question);
+
+
+            fetch("/log_question", {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: question }),
+            })
+            .then(e => {
+                utterThis.onend = function (event) {
+
+                    // Giving a short delay after question is asked before starting recording
+                    setTimeout(() => {
+                        startRecording();
+                    }, 200);
+                };
+                synth.speak(utterThis);
+            });
+        }
+    </script>    
+</head>
+<body>
+    <h2>Click the microphone and speak after the voice assistant asks the question</h2>
+    <button onclick="askQuestion()">🎙️</button>
+    <p id="response"></p>
+</body>
+</html>
